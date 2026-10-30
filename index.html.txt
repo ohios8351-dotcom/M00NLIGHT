@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>M00NLIGHT — Dark File Host</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Space Grotesk', sans-serif;
+      background-color: #000000;
+      color: #ffffff;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #09090b;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="bg-black text-white min-h-screen flex flex-col selection:bg-white selection:text-black">
+
+  <!-- TOP NAV BAR -->
+  <header class="border-b border-zinc-800 bg-black/90 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <!-- Logo -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('upload')">
+        <div class="w-8 h-8 bg-white text-black font-bold flex items-center justify-center rounded-sm text-lg tracking-tighter">
+          M
+        </div>
+        <span class="text-xl font-bold tracking-widest text-white">M00NLIGHT</span>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="hidden md:flex items-center space-x-1 text-sm">
+        <button onclick="switchTab('upload')" id="nav-upload" class="px-4 py-2 rounded text-zinc-400 hover:text-white transition">Upload</button>
+        <button onclick="switchTab('files')" id="nav-files" class="px-4 py-2 rounded text-zinc-400 hover:text-white transition">Explore Files</button>
+        <button onclick="switchTab('profile')" id="nav-profile" class="px-4 py-2 rounded text-zinc-400 hover:text-white transition">Profile</button>
+        <button onclick="switchTab('admin')" id="nav-admin" class="hidden px-4 py-2 rounded text-zinc-400 hover:text-white border border-zinc-700 transition">Control Panel</button>
+      </nav>
+
+      <!-- Account Action / Identity -->
+      <div class="flex items-center space-x-3" id="auth-header-container">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-grow max-w-7xl mx-auto px-4 py-8 w-full">
+
+    <!-- HERO BANNER -->
+    <div class="mb-8 border border-zinc-800 bg-zinc-950 p-6 rounded-lg text-center relative overflow-hidden">
+      <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+      <h1 class="text-3xl md:text-5xl font-black tracking-tight mb-2">ULTRA FAST MONOCHROME FILE HOSTING</h1>
+      <p class="text-zinc-400 max-w-2xl mx-auto text-sm md:text-base mb-3">
+        Zero advertisements. 5 TB capacity for every user. No expiration limits. High speed sharing.
+      </p>
+      <div class="inline-flex items-center space-x-4 text-xs font-mono bg-black border border-zinc-800 px-4 py-1.5 rounded-full text-zinc-300">
+        <span>⚡ 5 TB Storage</span>
+        <span class="text-zinc-700">|</span>
+        <span>🚫 No Expiration</span>
+        <span class="text-zinc-700">|</span>
+        <span>🛡️ End-to-End Encrypted ID</span>
+      </div>
+    </div>
+
+    <!-- TAB 1: UPLOAD AREA -->
+    <section id="tab-upload" class="space-y-6">
+      <div class="border-2 border-dashed border-zinc-800 bg-zinc-950 rounded-xl p-10 text-center hover:border-zinc-500 transition duration-300 cursor-pointer group" id="drop-zone">
+        <input type="file" id="file-input" class="hidden" multiple onchange="handleFileSelect(event)" />
+        <div class="flex flex-col items-center justify-center space-y-4" onclick="document.getElementById('file-input').click()">
+          <div class="w-16 h-16 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center group-hover:scale-110 transition">
+            <i data-lucide="upload-cloud" class="w-8 h-8 text-white"></i>
+          </div>
+          <div>
+            <p class="text-lg font-semibold">Drop files here or click to browse</p>
+            <p class="text-sm text-zinc-500 mt-1">Unlimited uploads • 5 TB capacity • Permanent retention</p>
+          </div>
+          <button type="button" class="px-6 py-2.5 bg-white text-black font-semibold rounded hover:bg-zinc-200 transition text-sm">
+            Select Files
+          </button>
+        </div>
+      </div>
+
+      <!-- Pending Upload List -->
+      <div id="upload-queue" class="hidden space-y-3 border border-zinc-800 bg-zinc-950 p-4 rounded-lg">
+        <h3 class="font-semibold text-sm text-zinc-400 border-b border-zinc-800 pb-2">Pending Uploads</h3>
+        <div id="queue-items" class="space-y-2"></div>
+        <div class="pt-2 flex justify-end">
+          <button onclick="processQueue()" class="px-5 py-2 bg-white text-black font-bold rounded text-sm hover:bg-zinc-200">
+            Start Upload
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: EXPLORE FILES -->
+    <section id="tab-files" class="hidden space-y-4">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h2 class="text-xl font-bold tracking-wider">PUBLIC NETWORK FILES</h2>
+        <div class="relative w-full md:w-64">
+          <input type="text" id="file-search" oninput="renderFileList()" placeholder="Search files or Player ID..." class="w-full bg-zinc-950 border border-zinc-800 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-white">
+        </div>
+      </div>
+
+      <div class="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-zinc-900 text-zinc-400 border-b border-zinc-800 uppercase text-xs font-mono">
+              <tr>
+                <th class="p-3">File Name</th>
+                <th class="p-3">Uploader</th>
+                <th class="p-3">Size</th>
+                <th class="p-3">Expiration</th>
+                <th class="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="files-table-body" class="divide-y divide-zinc-800">
+              <!-- Dynamically Populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: PROFILE & FOLLOWERS -->
+    <section id="tab-profile" class="hidden space-y-6">
+      <div id="profile-view-container">
+        <!-- Dynamically Populated Profile Card -->
+      </div>
+    </section>
+
+    <!-- TAB 4: OWNER / ADMIN CONTROL PANEL -->
+    <section id="tab-admin" class="hidden space-y-6">
+      <div class="border border-zinc-800 bg-zinc-950 p-6 rounded-lg">
+        <div class="flex items-center justify-between pb-4 border-b border-zinc-800 mb-6">
+          <div class="flex items-center space-x-3">
+            <i data-lucide="shield-alert" class="w-6 h-6 text-white"></i>
+            <h2 class="text-xl font-bold tracking-wider">MANAGEMENT CONTROL PANEL</h2>
+          </div>
+          <span id="admin-role-indicator" class="text-xs font-mono bg-white text-black px-2 py-1 font-bold rounded">ROLE: OWNER</span>
+        </div>
+
+        <!-- Metric Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div class="bg-black border border-zinc-800 p-4 rounded">
+            <p class="text-xs text-zinc-500 uppercase">Total Users</p>
+            <p class="text-2xl font-bold mt-1" id="metric-users">0</p>
+          </div>
+          <div class="bg-black border border-zinc-800 p-4 rounded">
+            <p class="text-xs text-zinc-500 uppercase">Total Files</p>
+            <p class="text-2xl font-bold mt-1" id="metric-files">0</p>
+          </div>
+          <div class="bg-black border border-zinc-800 p-4 rounded">
+            <p class="text-xs text-zinc-500 uppercase">Retention Limit</p>
+            <p class="text-2xl font-bold mt-1 text-white">PERMANENT</p>
+          </div>
+          <div class="bg-black border border-zinc-800 p-4 rounded">
+            <p class="text-xs text-zinc-500 uppercase">Max User Allocation</p>
+            <p class="text-2xl font-bold mt-1 text-white">5 TB / User</p>
+          </div>
+        </div>
+
+        <!-- User Management Table -->
+        <h3 class="font-bold text-lg mb-3">User Account & Role Management</h3>
+        <div class="border border-zinc-800 rounded overflow-hidden bg-black mb-6">
+          <table class="w-full text-left text-sm">
+            <thead class="bg-zinc-900 text-zinc-400 border-b border-zinc-800 font-mono text-xs">
+              <tr>
+                <th class="p-3">Player ID</th>
+                <th class="p-3">Username</th>
+                <th class="p-3">Role</th>
+                <th class="p-3">Followers</th>
+                <th class="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-users-table" class="divide-y divide-zinc-800">
+              <!-- Dynamically Populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Owner Specific Custom Controls -->
+        <div id="owner-exclusive-controls" class="border border-zinc-800 bg-black p-4 rounded space-y-4">
+          <h4 class="font-bold text-sm text-zinc-300 uppercase font-mono tracking-wider">Owner Override Panel</h4>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button onclick="ownerClearAllFiles()" class="px-4 py-2 bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-red-400 font-semibold rounded text-sm transition text-left">
+              ⚠️ Purge All Network Files
+            </button>
+            <button onclick="ownerResetDatabase()" class="px-4 py-2 bg-zinc-900 border border-zinc-700 hover:bg-zinc-800 text-red-400 font-semibold rounded text-sm transition text-left">
+              🚨 Hard Reset App Local Storage
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- AUTH / REGISTER MODAL -->
+  <div id="auth-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-6 w-full max-w-md relative">
+      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-zinc-500 hover:text-white">✕</button>
+      <h3 class="text-xl font-bold mb-4" id="modal-title">Create M00NLIGHT Account</h3>
+      <form onsubmit="handleAuthSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-mono uppercase text-zinc-400 mb-1">Username</label>
+          <input type="text" id="auth-username" required class="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-white">
+        </div>
+        <div>
+          <label class="block text-xs font-mono uppercase text-zinc-400 mb-1">Password</label>
+          <input type="password" id="auth-password" required class="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-sm focus:outline-none focus:border-white">
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-white text-black font-bold rounded hover:bg-zinc-200 transition text-sm">
+          Submit
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <footer class="border-t border-zinc-900 py-6 text-center text-xs text-zinc-600 font-mono">
+    M00NLIGHT FILE HOSTING SYSTEM • ALL RIGHTS RESERVED
+  </footer>
+
+  <!-- CORE LOGIC JavaScript -->
+  <script>
+    // --- APP STATE INITIALIZATION ---
+    const STORAGE_KEYS = {
+      USERS: 'moonlight_users_v2',
+      FILES: 'moonlight_files_v2',
+      CURRENT_USER: 'moonlight_session_v2'
+    };
+
+    // Default Owner Setup
+    const DEFAULT_OWNER = {
+      id: '#000001',
+      username: 'Scarlett.lol',
+      password: 'password',
+      role: 'OWNER',
+      followers: [],
+      following: [],
+      createdAt: new Date().toLocaleDateString()
+    };
+
+    let users = JSON.parse(localStorage.getItem(STORAGE_KEYS.USERS)) || [DEFAULT_OWNER];
+    let files = JSON.parse(localStorage.getItem(STORAGE_KEYS.FILES)) || [];
+    let currentUser = JSON.parse(localStorage.getItem(STORAGE_KEYS.CURRENT_USER)) || DEFAULT_OWNER;
+
+    // LocalStorage Auto-Sync Helper
+    function saveData() {
+      localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
+      localStorage.setItem(STORAGE_KEYS.FILES, JSON.stringify(files));
+      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(currentUser));
+    }
+
+    // Storage Migration Routine to ensure Scarlett.lol is preserved
+    (function migrateOwner() {
+      const existingOwnerIdx = users.findIndex(u => u.id === '#000001');
+      if (existingOwnerIdx !== -1) {
+        users[existingOwnerIdx].username = 'Scarlett.lol';
+        users[existingOwnerIdx].role = 'OWNER';
+      } else {
+        users.unshift(DEFAULT_OWNER);
+      }
+      if (currentUser && currentUser.id === '#000001') {
+        currentUser.username = 'Scarlett.lol';
+        currentUser.role = 'OWNER';
+      }
+      saveData();
+    })();
+
+    let pendingFiles = [];
+
+    // --- TAB SWITCHING ---
+    function switchTab(tabName) {
+      ['upload', 'files', 'profile', 'admin'].forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        const nav = document.getElementById(`nav-${t}`);
+        if (el) el.classList.add('hidden');
+        if (nav) nav.classList.remove('bg-zinc-800', 'text-white');
+      });
+
+      const targetTab = document.getElementById(`tab-${tabName}`);
+      const targetNav = document.getElementById(`nav-${tabName}`);
+      if (targetTab) targetTab.classList.remove('hidden');
+      if (targetNav) targetNav.classList.add('bg-zinc-800', 'text-white');
+
+      if (tabName === 'files') renderFileList();
+      if (tabName === 'profile') renderProfileView();
+      if (tabName === 'admin') renderAdminPanel();
+    }
+
+    // --- RENDER HEADER / AUTH ---
+    function renderHeaderAuth() {
+      const container = document.getElementById('auth-header-container');
+      const adminNav = document.getElementById('nav-admin');
+
+      if (['OWNER', 'ADMIN', 'MODERATOR'].includes(currentUser.role)) {
+        adminNav.classList.remove('hidden');
+      } else {
+        adminNav.classList.add('hidden');
+      }
+
+      container.innerHTML = `
+        <div class="flex items-center space-x-2 border border-zinc-800 bg-zinc-950 px-3 py-1.5 rounded">
+          <div class="text-right">
+            <div class="text-xs font-bold leading-none">${currentUser.username}</div>
+            <div class="text-[10px] font-mono text-zinc-500">${currentUser.id} • ${getRoleBadgeHtml(currentUser.role)}</div>
+          </div>
+          <button onclick="logout()" class="ml-2 text-zinc-500 hover:text-white" title="Logout">
+            <i data-lucide="log-out" class="w-4 h-4"></i>
+          </button>
+        </div>
+      `;
+      lucide.createIcons();
+    }
+
+    function getRoleBadgeHtml(role) {
+      switch(role) {
+        case 'OWNER': return '<span class="bg-white text-black font-extrabold px-1 rounded text-[9px]">OWNER</span>';
+        case 'ADMIN': return '<span class="border border-white text-white font-bold px-1 rounded text-[9px]">ADMIN</span>';
+        case 'MODERATOR': return '<span class="border border-zinc-500 text-zinc-400 font-bold px-1 rounded text-[9px]">MOD</span>';
+        default: return '<span class="text-zinc-600 font-bold text-[9px]">USER</span>';
+      }
+    }
+
+    // --- FILE UPLOAD MANAGEMENT ---
+    function handleFileSelect(e) {
+      const selectedFiles = Array.from(e.target.files);
+      pendingFiles = pendingFiles.concat(selectedFiles);
+      renderUploadQueue();
+    }
+
+    function renderUploadQueue() {
+      const queueContainer = document.getElementById('upload-queue');
+      const itemsContainer = document.getElementById('queue-items');
+
+      if (pendingFiles.length === 0) {
+        queueContainer.classList.add('hidden');
+        return;
+      }
+
+      queueContainer.classList.remove('hidden');
+      itemsContainer.innerHTML = pendingFiles.map((file, idx) => `
+        <div class="flex items-center justify-between bg-black p-2 rounded text-xs border border-zinc-800">
+          <span class="truncate max-w-xs font-mono">${file.name}</span>
+          <span class="text-zinc-500 font-mono">${formatBytes(file.size)}</span>
+          <button onclick="removePendingFile(${idx})" class="text-zinc-500 hover:text-white">✕</button>
+        </div>
+      `).join('');
+    }
+
+    function removePendingFile(idx) {
+      pendingFiles.splice(idx, 1);
+      renderUploadQueue();
+    }
+
+    function processQueue() {
+      pendingFiles.forEach(file => {
+        const fileObj = {
+          id: 'file_' + Math.random().toString(36).substr(2, 9),
+          name: file.name,
+          size: file.size,
+          uploaderId: currentUser.id,
+          uploaderName: currentUser.username,
+          expiration: 'NEVER',
+          timestamp: new Date().toISOString()
+        };
+        files.unshift(fileObj);
+      });
+
+      saveData();
+      pendingFiles = [];
+      renderUploadQueue();
+      switchTab('files');
+    }
+
+    // --- EXPLORE FILES VIEW ---
+    function renderFileList() {
+      const tbody = document.getElementById('files-table-body');
+      const search = (document.getElementById('file-search')?.value || '').toLowerCase();
+
+      const filtered = files.filter(f => 
+        f.name.toLowerCase().includes(search) || 
+        f.uploaderName.toLowerCase().includes(search) ||
+        f.uploaderId.toLowerCase().includes(search)
+      );
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-zinc-500">No files found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(file => {
+        const canDelete = currentUser.role === 'OWNER' || currentUser.role === 'ADMIN' || file.uploaderId === currentUser.id;
+        return `
+          <tr class="hover:bg-zinc-900/50 transition">
+            <td class="p-3 font-medium flex items-center space-x-2">
+              <i data-lucide="file" class="w-4 h-4 text-zinc-400"></i>
+              <span>${file.name}</span>
+            </td>
+            <td class="p-3 text-zinc-400 font-mono text-xs">${file.uploaderName} (${file.uploaderId})</td>
+            <td class="p-3 text-zinc-400 font-mono text-xs">${formatBytes(file.size)}</td>
+            <td class="p-3 text-zinc-400 font-mono text-xs">NEVER</td>
+            <td class="p-3 text-right">
+              ${canDelete ? `<button onclick="deleteFile('${file.id}')" class="text-xs text-red-400 hover:text-red-300 mr-2">Delete</button>` : ''}
+              <button onclick="downloadFileMock('${file.name}')" class="text-xs bg-white text-black font-bold px-2 py-1 rounded hover:bg-zinc-200">Download</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function deleteFile(fileId) {
+      files = files.filter(f => f.id !== fileId);
+      saveData();
+      renderFileList();
+    }
+
+    function downloadFileMock(fileName) {
+      alert(`Downloading ${fileName}...`);
+    }
+
+    // --- PROFILE & FOLLOW SYSTEM ---
+    function renderProfileView() {
+      const container = document.getElementById('profile-view-container');
+      const myFiles = files.filter(f => f.uploaderId === currentUser.id);
+      const totalUsedBytes = myFiles.reduce((acc, curr) => acc + curr.size, 0);
+      const storageLimitBytes = 5 * 1024 * 1024 * 1024 * 1024; // 5 TB
+      const percentageUsed = ((totalUsedBytes / storageLimitBytes) * 100).toFixed(4);
+
+      container.innerHTML = `
+        <div class="border border-zinc-800 bg-zinc-950 p-6 rounded-lg space-y-6">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-zinc-800 pb-6 gap-4">
+            <div>
+              <div class="flex items-center space-x-3">
+                <h2 class="text-2xl font-bold">${currentUser.username}</h2>
+                ${getRoleBadgeHtml(currentUser.role)}
+              </div>
+              <p class="text-xs font-mono text-zinc-500 mt-1">PLAYER ID: ${currentUser.id}</p>
+            </div>
+            
+            <div class="flex space-x-6 text-center font-mono">
+              <div>
+                <div class="text-xl font-bold">${currentUser.followers ? currentUser.followers.length : 0}</div>
+                <div class="text-xs text-zinc-500 uppercase">Followers</div>
+              </div>
+              <div>
+                <div class="text-xl font-bold">${currentUser.following ? currentUser.following.length : 0}</div>
+                <div class="text-xs text-zinc-500 uppercase">Following</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- STORAGE METER -->
+          <div class="border border-zinc-800 bg-black p-4 rounded-lg space-y-2">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-zinc-400">STORAGE USED</span>
+              <span>${formatBytes(totalUsedBytes)} / 5 TB (${percentageUsed}%)</span>
+            </div>
+            <div class="w-full bg-zinc-900 rounded-full h-2 overflow-hidden border border-zinc-800">
+              <div class="bg-white h-2 rounded-full" style="width: ${Math.max(percentageUsed, 0.5)}%"></div>
+            </div>
+          </div>
+
+          <!-- MY FILES -->
+          <div>
+            <h3 class="font-bold text-sm text-zinc-400 uppercase font-mono mb-3">Your Uploaded Files (${myFiles.length})</h3>
+            <div class="space-y-2">
+              ${myFiles.length === 0 ? '<p class="text-xs text-zinc-600">No files uploaded yet.</p>' : myFiles.map(f => `
+                <div class="flex justify-between items-center bg-black p-3 rounded border border-zinc-800 text-xs font-mono">
+                  <span>${f.name}</span>
+                  <span class="text-zinc-500">${formatBytes(f.size)}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // --- CONTROL PANEL (OWNER / ADMIN) ---
+    function renderAdminPanel() {
+      document.getElementById('metric-users').innerText = users.length;
+      document.getElementById('metric-files').innerText = files.length;
+
+      const tbody = document.getElementById('admin-users-table');
+      const isOwner = currentUser.role === 'OWNER';
+
+      tbody.innerHTML = users.map(user => {
+        const isSelf = user.id === currentUser.id;
+        return `
+          <tr class="hover:bg-zinc-900/50 transition">
+            <td class="p-3 font-mono text-xs">${user.id}</td>
+            <td class="p-3 font-bold">${user.username}</td>
+            <td class="p-3">${getRoleBadgeHtml(user.role)}</td>
+            <td class="p-3 font-mono text-xs">${user.followers ? user.followers.length : 0}</td>
+            <td class="p-3 text-right space-x-2">
+              ${isOwner && !isSelf ? `
+                <button onclick="changeRole('${user.id}', 'ADMIN')" class="text-xs border border-zinc-700 px-2 py-0.5 rounded hover:bg-white hover:text-black transition">Make Admin</button>
+                <button onclick="changeRole('${user.id}', 'MODERATOR')" class="text-xs border border-zinc-700 px-2 py-0.5 rounded hover:bg-white hover:text-black transition">Make Mod</button>
+                <button onclick="changeRole('${user.id}', 'USER')" class="text-xs border border-zinc-700 px-2 py-0.5 rounded hover:bg-white hover:text-black transition">Demote</button>
+              ` : '<span class="text-xs text-zinc-600 font-mono">NO ACTIONS</span>'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function changeRole(userId, newRole) {
+      const target = users.find(u => u.id === userId);
+      if (target) {
+        target.role = newRole;
+        saveData();
+        renderAdminPanel();
+      }
+    }
+
+    function ownerClearAllFiles() {
+      if (confirm("Are you sure you want to clear ALL files from the network?")) {
+        files = [];
+        saveData();
+        renderAdminPanel();
+        alert("All files purged.");
+      }
+    }
+
+    function ownerResetDatabase() {
+      if (confirm("Reset local storage to defaults?")) {
+        localStorage.clear();
+        location.reload();
+      }
+    }
+
+    // --- AUTHENTICATION MODAL & UTILS ---
+    function openAuthModal() {
+      document.getElementById('auth-modal').classList.remove('hidden');
+    }
+
+    function closeAuthModal() {
+      document.getElementById('auth-modal').classList.add('hidden');
+    }
+
+    function handleAuthSubmit(e) {
+      e.preventDefault();
+      const nameInput = document.getElementById('auth-username').value.trim();
+      const passInput = document.getElementById('auth-password').value;
+
+      const newUser = {
+        id: '#' + Math.floor(100000 + Math.random() * 900000),
+        username: nameInput,
+        password: passInput,
+        role: 'USER',
+        followers: [],
+        following: [],
+        createdAt: new Date().toLocaleDateString()
+      };
+
+      users.push(newUser);
+      currentUser = newUser;
+      saveData();
+
+      closeAuthModal();
+      renderHeaderAuth();
+      switchTab('upload');
+    }
+
+    function logout() {
+      openAuthModal();
+    }
+
+    function formatBytes(bytes, decimals = 2) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const dm = decimals < 0 ? 0 : decimals;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+
+    // APP INIT
+    renderHeaderAuth();
+    switchTab('upload');
+  </script>
+</body>
+</html>
